@@ -1,0 +1,36 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-msvc:
+    name: Build x86_64-pc-windows-msvc
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Rust target
+        run: rustup target add x86_64-pc-windows-msvc
+
+      - name: Build release binary
+        run: cargo build --release --locked --target x86_64-pc-windows-msvc
+
+      - name: Prepare release asset
+        shell: pwsh
+        run: |
+          $tagName = "${{ github.ref_name }}"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item "target/x86_64-pc-windows-msvc/release/fpui.exe" "dist/fpui-$tagName-x86_64-pc-windows-msvc.exe"
+
+      - name: Upload binary to GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/fpui-${{ github.ref_name }}-x86_64-pc-windows-msvc.exe

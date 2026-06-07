@@ -38,14 +38,11 @@ impl Config {
 
     pub fn load() -> Self {
         let path = Self::config_path();
-        if path.exists() {
-            if let Ok(data) = fs::read_to_string(&path) {
-                if let Ok(cfg) = serde_json::from_str(&data) {
-                    return cfg;
-                }
-            }
-        }
-        Self::default()
+        path.exists()
+            .then(|| fs::read_to_string(&path).ok())
+            .flatten()
+            .and_then(|data| serde_json::from_str(&data).ok())
+            .unwrap_or_default()
     }
 
     pub fn save(&self) {
