@@ -17,6 +17,7 @@ use winapi::{
     },
     um::{
         dwmapi::DwmSetWindowAttribute,
+        uxtheme::SetWindowTheme,
         wingdi::{CreateSolidBrush, DeleteObject, RGB, SetBkColor, SetTextColor},
         winreg::{HKEY_CURRENT_USER, RRF_RT_REG_DWORD, RegGetValueW},
         winuser::{
@@ -534,8 +535,16 @@ impl FpUiApp {
     fn apply_current_theme(&self) {
         let theme = Theme::current();
         set_window_dark_mode(&self.window, theme.dark);
+        self.apply_combo_themes(theme.dark);
         *self.theme_brushes.borrow_mut() = Some(ThemeBrushes::new(theme));
         redraw_window(&self.window);
+    }
+
+    fn apply_combo_themes(&self, dark: bool) {
+        set_combo_dark_theme(&self.fingerprint_platform.combo, dark);
+        set_combo_dark_theme(&self.lang.combo, dark);
+        set_combo_dark_theme(&self.timezone.combo, dark);
+        set_combo_dark_theme(&self.fingerprint_brand.combo, dark);
     }
 
     fn handle_theme_paint(
@@ -1191,6 +1200,21 @@ fn set_window_dark_mode(window: &nwg::Window, dark: bool) {
     unsafe {
         let _ = DwmSetWindowAttribute(hwnd, 20, &enabled as *const BOOL as LPCVOID, size);
         let _ = DwmSetWindowAttribute(hwnd, 19, &enabled as *const BOOL as LPCVOID, size);
+    }
+}
+
+fn set_combo_dark_theme(combo: &nwg::ComboBox<ComboOption>, dark: bool) {
+    let Some(hwnd) = combo.handle.hwnd() else {
+        return;
+    };
+
+    unsafe {
+        if dark {
+            let dark_mode = wide_null("DarkMode_CFD");
+            let _ = SetWindowTheme(hwnd, dark_mode.as_ptr(), std::ptr::null());
+        } else {
+            let _ = SetWindowTheme(hwnd, std::ptr::null(), std::ptr::null());
+        }
     }
 }
 
